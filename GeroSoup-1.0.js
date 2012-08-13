@@ -227,16 +227,12 @@ G.length = function(x,y){
 	return Math.sqrt(x * x + y * y);
 }
 
-G.Rect = function(x,y,width,height,color){
+G.Rect = function(x,y,width,height){
 	this.x = x || 0;
 	this.y = y || 0;
 	this.width = width || 0;
 	this.height = height || 0;
-	this.color = color || 0;
 	this.render = function(ctx){
-		if(this.color){
-			ctx.fillColor = this.color;
-		}
 		ctx.fillRect(x,y,width,height);
 	}
 }
@@ -298,7 +294,7 @@ G.AddScript = function(src){
   document.body.appendChild(script);
 }
 
-G.ColorChanger = function(color){
+G.Color = function(color){
  this.color = color || "#000000";
   this.render = function(ctx){
    ctx.fillStyle = this.color; 
@@ -322,10 +318,7 @@ G.Notification = function(text,time){
     d.id = 'GeroSoupNotificationBox';
     document.body.appendChild(d);
     G.NotificationDiv = d;
-    var s = document.createElement('style');
-    s.innerText = '#GeroSoupNotificationBox{position:absolute;right:0px;top:0px;width:25%;}.GeroSoupNotification{text-align:center;display:block;border:solid 1px black;border-radius:10px;padding:5px;margin:5px;background-color:white;color:black;} ';
-    document.body.appendChild(s);
-	}
+  }
   d = G.NotificationDiv;
   var n = document.createElement('div');
   n.className = 'GeroSoupNotification';
@@ -334,3 +327,8 @@ G.Notification = function(text,time){
   setTimeout(function(){d.removeChild(n);},time);
 };
 
+G.DefaultStyle = function(){
+    var s = document.createElement('style');
+    s.innerText = '#GeroSoupNotificationBox{position:absolute;right:0px;top:0px;width:25%;}.GeroSoupNotification{text-align:center;display:block;border:solid 1px black;border-radius:10px;padding:5px;margin:5px;background-color:white;color:black;} ';
+    document.body.appendChild(s);
+}
