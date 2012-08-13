@@ -230,7 +230,7 @@ G.length = function(x,y){
 G.Rect = function(x,y,width,height,color){
 	this.x = x || 0;
 	this.y = y || 0;
-	this.width || 0;
+	this.width = width || 0;
 	this.height = height || 0;
 	this.color = color || 0;
 	this.render = function(ctx){
