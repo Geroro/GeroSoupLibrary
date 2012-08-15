@@ -327,6 +327,28 @@ G.Notification = function(text,time){
   setTimeout(function(){d.removeChild(n);},time);
 };
 
+G.StringifyObject = function(o,objectName,suffix){
+  var string = '';
+  if(!objectName){
+    objectName = '';
+  }else{
+    objectName = objectName + '.';
+  }
+  suffix = suffix || '';
+  for(var key in o){
+    if(typeof o[key] === 'object'){
+      string += G.StringifyObject(o[key],key,suffix);
+    }else{
+      if(typeof o[key] === 'function'){
+        string += 'Func: '+objectName + key + suffix; 
+      }else{
+        string += objectName + key + ': ' + o[key] + suffix; 
+      }
+    }
+  }
+  return string;
+}
+
 G.DefaultStyle = function(){
     var s = document.createElement('style');
     s.innerText = '#GeroSoupNotificationBox{position:absolute;right:0px;top:0px;width:25%;}.GeroSoupNotification{text-align:center;display:block;border:solid 1px black;border-radius:10px;padding:5px;margin:5px;background-color:white;color:black;} ';
