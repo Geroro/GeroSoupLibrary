@@ -342,7 +342,7 @@ G.StringifyObject = function(o,objectName,suffix,limit,current){
   suffix = suffix || '';
   for(var key in o){
     if(typeof o[key] === 'object'){
-      string += G.StringifyObject(o[key],key,suffix);
+      string += G.StringifyObject(o[key],key,suffix,limit,current);
     }else{
       if(typeof o[key] === 'function'){
         string += 'Func: '+objectName + key + suffix; 
