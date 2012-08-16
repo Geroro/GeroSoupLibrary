@@ -330,7 +330,8 @@ G.Notification = function(text,time){
 G.StringifyObject = function(o,objectName,suffix,limit,current){
   var string = '';
   limit = limit || 2;
-  current = current || 0;
+  current = current || -1;
+  current++;
   if(current > limit){
   	return '';
   }
