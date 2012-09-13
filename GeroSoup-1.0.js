@@ -17,6 +17,7 @@ G.NotificationTime = 2000;
 G.Scene = function(width, height){
 this.width = width || 0;
 this.height = height || 0;
+this.camera = {x:0,y:0};
 this.ctx = document.createElement('canvas').getContext('2d');
 var ctx = this.ctx;
 ctx.fillCircle = function(size,x,y){
@@ -147,6 +148,93 @@ G.LoadImage = function(name,src,callback){
 
 G.MapNumber = function(x,a,b,c,d){
 	return (x-a)/(b-a) * (d-c) + c;
+}
+
+G.GamePadListener = function(a){
+	var _this = this;
+	var gamepadSupportAvailable = !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
+	this.stopped = 0;
+	this.gamepads = [];
+	a = a || 1;
+	this.stop = function(){
+		this.stopped = 1;
+	}
+	this.start = function(){
+		this.stopped = 0;
+		this.loop();
+	}
+	this.init = function(){
+		while(a--){
+			this.gamepads.push(new this.gamepad());
+		}
+		this.loop();
+	}
+	this.loop = function(){
+		if(!_this.stopped){requestAnimFrame(_this.loop)};
+		var gamepads = navigator.webkitGetGamepads();
+		for(var key in _this.gamepads){
+			var g = gamepads[key];
+			for(var b in g.buttons){
+				var d = _this.gamepads[key].buttonDebounce[b];
+				if(g.buttons[b] > 0.2 || g.buttons[b] < -0.2){
+					if(!d){
+						if(_this.gamepads[key].buttonDown[b]){
+							_this.gamepads[key].buttonDown[b](g.buttons[b],b);
+						}else{
+							console.log(g.buttons[b]);
+						}
+					}
+					_this.gamepads[key].buttonDebounce[b] = 1;
+				}else{
+					_this.gamepads[key].buttonDebounce[b] = 0;
+				}
+			}
+			for(var a in g.axes){
+				var d = _this.gamepads[key].axisDebounce[a];
+				if(g.axes[a] > 0.2 || g.axes[a] < -0.2){
+					if(!d){
+						if(_this.gamepads[key].axisDown[a]){
+							_this.gamepads[key].axisDown[a](g.axis[a],a);
+						}else{
+							console.log(g.axes[a]);
+						}
+					}
+					_this.gamepads[key].axisDebounce[a] = 1;
+				}else{
+					_this.gamepads[key].axisDebounce[a] = 0;
+				}
+			}
+		}
+	}
+	this.debugger = function(){
+		this.render = function(ctx){
+			var y = 0;
+			for(var g in gp.gamepads){
+				ctx.fillText('Gamepad '+g,10,20 + y);
+				for(var i in gp.gamepads[g].buttonDebounce){
+					ctx.fillText(gp.gamepads[g].buttonDebounce[i],10 + 10 * i,30 + y);
+				}
+				for(var i in gp.gamepads[g].axisDebounce){
+					ctx.fillText(gp.gamepads[g].axisDebounce[i],10 + 10 * i,40 + y);
+				}
+				y+=40;
+			}
+		}
+	}
+	this.gamepad = function(){
+		this.buttonDown = {};
+		this.buttonUp = {};
+		this.buttonDebounce = {};
+		this.axisDown = {};
+		this.axisUp = {};
+		this.axisDebounce = {};
+	}
+	if(gamepadSupportAvailable){
+		console.log('Gamepads Enabled');
+		this.init();
+	}else{
+		console.log('Gamepads Failed');
+	}
 }
 
 G.KeyListener=function(debug){
