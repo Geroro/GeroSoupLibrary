@@ -156,6 +156,7 @@ G.GamePadListener = function(a){
 	this.stopped = 0;
 	this.gamepads = [];
 	a = a || 1;
+	this.gamepadCount = 0;
 	this.stop = function(){
 		this.stopped = 1;
 	}
@@ -172,7 +173,7 @@ G.GamePadListener = function(a){
 	this.loop = function(){
 		if(!_this.stopped){requestAnimFrame(_this.loop)};
 		var gamepads = navigator.webkitGetGamepads();
-		for(var key in _this.gamepads){
+		for(var key in gamepads){
 			var g = gamepads[key];
 			for(var b in g.buttons){
 				var d = _this.gamepads[key].buttonDebounce[b];
@@ -222,6 +223,7 @@ G.GamePadListener = function(a){
 		}
 	}
 	this.gamepad = function(){
+		this.active = 0;
 		this.buttonDown = {};
 		this.buttonUp = {};
 		this.buttonDebounce = {};
