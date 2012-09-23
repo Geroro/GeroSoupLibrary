@@ -70,10 +70,6 @@ this.render = function(){
 	ctx.translate(-this.camera.x,-this.camera.y);
 	for(i in this.objects){
 		var o = this.objects[i];
-		o.GeroSoupOldX = o.x;
-		o.GeroSoupOldY = o.y;
-		o.GeroSoupOldWidth = o.width;
-		o.GeroSoupOldHeight = o.width;
 		o.render(ctx);
 	}
 	ctx.restore();
@@ -97,7 +93,7 @@ this.clear = function(){
 	for(i in this.objects){
 		var o = this.objects[i];
 		if(o.clear){o.clear(); continue;}
-		ctx.clearRect(o.GeroSoupOldX - 2, o.GeroSoupOldY - 2, o.GeroSoupOldWidth + 4, o.GeroSoupOldHeight) + 4;
+		ctx.clearRect(o.x - 2, o.y - 2, o.width + 4, o.height) + 4;
 	}
 	ctx.translate(-this.camera.x, -this.camera.y);
 }	
@@ -187,6 +183,13 @@ G.GamePadListener = function(a){
 					}
 					_this.gamepads[key].buttonDebounce[b] = 1;
 				}else{
+					if(d){
+						if(_this.gamepads[key].buttonUp[b]){
+							_this.gamepads[key].buttonUp[b](g.buttons[b],b);
+						}else{
+							console.log(b);
+						}
+					}
 					_this.gamepads[key].buttonDebounce[b] = 0;
 				}
 			}
@@ -195,13 +198,20 @@ G.GamePadListener = function(a){
 				if(g.axes[a] > 0.2 || g.axes[a] < -0.2){
 					if(!d){
 						if(_this.gamepads[key].axisDown[a]){
-							_this.gamepads[key].axisDown[a](g.axis[a],a);
+							_this.gamepads[key].axisDown[a](g.axes[a],a);
 						}else{
-							console.log(g.axes[a]);
+							console.log(a);
 						}
 					}
 					_this.gamepads[key].axisDebounce[a] = 1;
 				}else{
+					if(d){
+						if(_this.gamepads[key].axisUp[a]){
+							_this.gamepads[key].axisUp[a](g.axes[a],a);
+						}else{
+							console.log(a);
+						}
+					}
 					_this.gamepads[key].axisDebounce[a] = 0;
 				}
 			}
