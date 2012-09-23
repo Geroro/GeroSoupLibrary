@@ -90,10 +90,10 @@ this.blank = function(){
 this.clear = function(){
 	var ctx = this.ctx;
 	ctx.translate(this.camera.x, this.camera.y);
-	for(i in this.objects){
+	for(var i in this.objects){
 		var o = this.objects[i];
 		if(o.clear){o.clear(); continue;}
-		ctx.clearRect(o.x - 2, o.y - 2, o.width + 4, o.height) + 4;
+		ctx.clearRect(o.x-2,o.y-2,o.width+4,o.height+4);
 	}
 	ctx.translate(-this.camera.x, -this.camera.y);
 }	
