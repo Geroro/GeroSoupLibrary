@@ -1,5 +1,6 @@
 //Harrison Hartley 2012
 var G = {};
+
 window.requestAnimFrame = (function(){
       return  window.requestAnimationFrame       || 
               window.webkitRequestAnimationFrame || 
@@ -10,31 +11,80 @@ window.requestAnimFrame = (function(){
                 window.setTimeout(callback, 1000 / 60);
               };
     })();
+
+function $(id){
+	return document.getElementById(id);
+}
+
 G.padDebounce = [];
 
 G.NotificationTime = 2000;
 
-G.Scene = function(width, height){
+G.Scene = function(width, height, parent){
 this.width = width || 0;
 this.height = height || 0;
 this.camera = {x:0,y:0};
+this.scale = {x:0,y:0};
 this.ctx = document.createElement('canvas').getContext('2d');
 var ctx = this.ctx;
-ctx.fillCircle = function(size,x,y){
+this.screenshot = function(){
+	window.open(this.canvas.toDataURL());
+}
+ctx.fillCircle = function(size,x,y,start,end,backwards){
+	start = start || 0;
+	end = end || Math.PI*2;
+	backwards = backwards || true;
 	ctx.beginPath();
 	if(size < 0){size = Math.abs(size)};
-	ctx.arc(x,y,size,0,Math.PI*2,true); // Outer circle
+	ctx.arc(x,y,size,start,end,backwards); // Outer circle
 	ctx.fill();
 }
-ctx.strokeCircle = function(size,x,y){
+ctx.cutCircle = function(size,x,y,start,end,backwards){
+	start = start || 0;
+	end = end || Math.PI*2;
+	backwards = backwards || true;
+	ctx.beginPath();
+	if(size < 0){size = 0};
+	ctx.arc(x,y,size,start,end,backwards); // Outer circle
+	ctx.lineTo(x,y);
+	ctx.fill();
+
+	//	ctx.arc(x,y,size * 0.25,start,end,!backwards); // Outer circle
+	//	ctx.arc(x,y,size,start,end,backwards); // Outer circle
+}
+ctx.strokeCircle = function(size,x,y,start,end,backwards){
+	start = start || 0;
+	end = end || Math.PI*2;
+	backwards = backwards || true;
 	ctx.beginPath();
 	if(size < 0){size = Math.abs(size)};
-	ctx.arc(x,y,size,0,Math.PI*2,true); // Outer circle
+	ctx.arc(x,y,size,start,end,backwards); // Outer circle
 	ctx.stroke();
+}
+ctx.drawButton = function(x,y,width,height,text,buttonColor,textColor){
+	x -= width * 0.5;
+	y -= height * 0.5;
+	height = height * 0.5;
+	width = width * 0.5;
+	y += height;
+	x += width * 0.5;
+	ctx.fillStyle = buttonColor || '#000';
+	ctx.beginPath();
+	ctx.arc(x,y,height,Math.PI * -0.50,Math.PI * 0.50,true); // Outer circle
+	ctx.arc(x + width,y,height,Math.PI * 0.50,Math.PI * -0.50,true); // Outer circle
+	ctx.lineTo(x,y - height);
+	ctx.fill();
+	if(text){
+		ctx.fillStyle = textColor || '#fff';
+		ctx.textAlign = 'center';
+		ctx.font = '12pt Helvetica';
+		ctx.fillText(text,x + width * 0.5 - 2,y + 6);
+	}
 }
 this.canvas = this.ctx.canvas;
 this.canvas.className = 'GeroSoupCanvas';
-document.body.appendChild(this.canvas);
+parent = parent || document.body;
+parent.appendChild(this.canvas);
 this.canvas.width = this.width;
 this.canvas.height = this.height;
 this.camera = {
@@ -48,7 +98,6 @@ this.hud = {};
 this.add = function(o){
 	o.GeroSoupID = this.length;
 	this.objects[o.GeroSoupID] = o;
-	o.GeroSoupOldWidth = o.GeroSoupOldY = o.GeroSoupOldX = 	o.GeroSoupOldHeight = 0;
 	this.length++;
 };
 this.remove = function(o){
@@ -67,6 +116,7 @@ this.removeHud = function(o){
 this.render = function(){
 	var ctx = this.ctx;
 	ctx.save();
+	ctx.scale(this.scale.x,this.scale.y);
 	ctx.translate(-this.camera.x,-this.camera.y);
 	for(i in this.objects){
 		var o = this.objects[i];
@@ -83,12 +133,18 @@ this.empty = function(){
 	this.objects = {};
 }
 
+this.emptyHud = function(){
+	this.hud = {};
+};
+
 this.blank = function(){
 	this.ctx.clearRect(0,0,this.width,this.height);
 }
 
 this.clear = function(){
 	var ctx = this.ctx;
+	ctx.save();
+	ctx.scale(this.scale.x,this.scale.y);
 	ctx.translate(this.camera.x, this.camera.y);
 	for(var i in this.objects){
 		var o = this.objects[i];
@@ -96,6 +152,7 @@ this.clear = function(){
 		ctx.clearRect(o.x-2,o.y-2,o.width+4,o.height+4);
 	}
 	ctx.translate(-this.camera.x, -this.camera.y);
+	ctx.restore();
 }	
 
 this.setFill = function(color){
@@ -124,10 +181,28 @@ G.Text = function(text,x,y,font,align){
 	this.type = "text";
 	this.x = x || 0;
 	this.y = y || 0;
-	this.render = function(xOffset, yOffset,ctx){
+	this.render = function(ctx){
 		ctx.font = this.font;
 		ctx.textAlign = this.align;
 		ctx.fillText(this.text, this.x, this.y);
+	}
+}
+
+G.StrokeText = function(text,x,y,font,align){
+	this.align = align || 0;
+	this.font = font || 0;
+	this.text = text;
+	this.type = "text";
+	this.x = x || 0;
+	this.y = y || 0;
+	this.render = function(ctx){
+		if(this.font){
+			ctx.font = this.font;
+		}
+		if(this.textAlign){
+			ctx.textAlign = this.align;
+		}
+		ctx.strokeText(this.text, this.x, this.y);
 	}
 }
 
@@ -145,14 +220,12 @@ G.LoadImage = function(name,src,callback){
 G.MapNumber = function(x,a,b,c,d){
 	return (x-a)/(b-a) * (d-c) + c;
 }
-
-G.GamePadListener = function(a){
-	var _this = this;
+//debugger is a reserved word :/
+G.GamePadListener = function(d){
 	var gamepadSupportAvailable = !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
-	this.stopped = 0;
-	this.gamepads = [];
-	a = a || 1;
-	this.gamepadCount = 0;
+
+	var _this = this;
+
 	this.stop = function(){
 		this.stopped = 1;
 	}
@@ -161,14 +234,19 @@ G.GamePadListener = function(a){
 		this.loop();
 	}
 	this.init = function(){
-		while(a--){
+		navigator.Gamepads = navigator.webkitGamepads || navigator.webkitGetGamepads();
+		this.stopped = 0;
+		this.gamepads = [];
+		i = 4;
+		this.gamepadCount = 0;
+		while(i--){
 			this.gamepads.push(new this.gamepad());
 		}
 		this.loop();
 	}
 	this.loop = function(){
 		if(!_this.stopped){requestAnimFrame(_this.loop)};
-		var gamepads = navigator.webkitGetGamepads();
+		var gamepads = navigator.webkitGamepads || navigator.webkitGetGamepads();
 		for(var key in gamepads){
 			var g = gamepads[key];
 			for(var b in g.buttons){
@@ -219,6 +297,7 @@ G.GamePadListener = function(a){
 	}
 	this.debugger = function(){
 		this.render = function(ctx){
+			//ctx.clearRect(0,0,200,300);
 			var y = 0;
 			for(var g in gp.gamepads){
 				ctx.fillText('Gamepad '+g,10,20 + y);
@@ -246,7 +325,9 @@ G.GamePadListener = function(a){
 		this.init();
 	}else{
 		console.log('Gamepads Failed');
+		this = false;
 	}
+
 }
 
 G.KeyListener=function(debug){
@@ -333,7 +414,45 @@ G.Rect = function(x,y,width,height){
 	this.width = width || 0;
 	this.height = height || 0;
 	this.render = function(ctx){
-		ctx.fillRect(x,y,width,height);
+		ctx.fillRect(this.x,this.y,this.width,this.height);
+	}
+}
+
+G.FillRect = function(x,y,width,height,rotation){
+	this.x = x || 0;
+	this.y = y || 0;
+	this.width = width || 0;
+	this.height = height || 0;
+	this.rotation = rotation || 0;
+	this.render = function(ctx){
+		if(this.rotation){
+			ctx.translate(this.x, this.y);
+			ctx.rotate(this.rotation);
+			ctx.fillRect(-this.width * 0.5,-this.height*0.5,this.width,this.height);
+			ctx.rotate(-this.rotation);
+			ctx.translate(-this.x, -this.y);
+		}else{
+			ctx.fillRect(this.x,this.y,this.width,this.height);
+		}
+	}
+}
+
+G.StrokeRect = function(x,y,width,height,rotation){
+	this.x = x || 0;
+	this.y = y || 0;
+	this.width = width || 0;
+	this.height = height || 0;
+	this.rotation = rotation || 0;
+	this.render = function(ctx){
+		if(this.rotation){
+			ctx.translate(this.x, this.y);
+			ctx.rotate(this.rotation);
+			ctx.strokeRect(-this.width * 0.5,-this.height*0.5,this.width,this.height);
+			ctx.rotate(-this.rotation);
+			ctx.translate(-this.x, -this.y);
+		}else{
+			ctx.strokeRect(this.x,this.y,this.width,this.height);
+		}
 	}
 }
 
@@ -422,7 +541,7 @@ G.Notification = function(text,time){
   d = G.NotificationDiv;
   var n = document.createElement('div');
   n.className = 'GeroSoupNotification';
-  n.innerText = text;
+  n.innerHTML = text;
   d.appendChild(n);
   setTimeout(function(){d.removeChild(n);},time);
 };
@@ -455,8 +574,133 @@ G.StringifyObject = function(o,objectName,suffix,limit,current){
   return string;
 }
 
+G.RandomArray = function(a){
+	return a[Math.floor(Math.random() * a.length)];
+}
+
+G.RandomFixedColor = function(a){
+	var i = 3;
+	color = '#';
+	while(i--){
+		color += G.RandomArray(a);
+	}
+	return color;
+}
+
+G.Count = function(o){
+	var count = 0;
+	for(var key in o){
+		count++;
+	}
+	return count;
+}
+
+G.Touchable = function() {
+  return !!('ontouchstart' in window);
+}
+
+G.GamePadSupport = function(){
+	return !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
+}
+
 G.DefaultStyle = function(){
     var s = document.createElement('style');
     s.innerText = '#GeroSoupNotificationBox{position:absolute;right:0px;top:0px;width:25%;}.GeroSoupNotification{text-align:center;display:block;border:solid 1px black;border-radius:10px;padding:5px;margin:5px;background-color:white;color:black;} ';
     document.body.appendChild(s);
+}
+
+G.Rotate = function(object,rotation){
+  object.rotation = rotation || 0;
+  object.render2 = object.render;
+  object.render = function(ctx){
+      var x = object.x;
+      var y = object.y;
+      var width = object.width || object.image.width;
+      var height = object.height || object.image.height;
+      ctx.translate(x, y);
+      ctx.rotate(object.rotation);
+      object.render2(ctx);
+      ctx.rotate(-object.rotation);
+      ctx.translate(-x, -y);
+  };
+}
+
+G.Image = function(url,x,y,rotation,axisX,axisY){
+  this.x = x || 0;
+  this.y = y || 0;
+  this.image = new Image();
+  this.image.src = url;
+  this.rotation = rotation || 0;
+  if(axisX === undefined){
+    this.axisX = this.image.width * 0.5;
+  }else{
+    this.axisX = axisX || 0;
+  }
+  if(axisY === undefined){
+    this.axisY = this.image.height * 0.5;
+  }else{
+    this.axisY = axisY || 0;
+  }
+  this.render = function(ctx){
+    if(this.rotation){
+      var x = this.x;
+      var y = this.y;
+      var width = this.image.width;
+      var height = this.image.height;
+      ctx.translate(x, y);
+      ctx.rotate(this.rotation);
+      ctx.drawImage(this.image, -this.axisX, -this.axisY, width, height);
+      ctx.rotate(-this.rotation);
+      ctx.translate(-x, -y);
+    }else{
+      ctx.drawImage(this.image,this.x - this.axisX,this.y - this.axisY);
+    }
+  };
+}
+
+G.Random = function(a){
+ return Math.floor(Math.random() * a); 
+}
+
+G.FloorParticle = function(size,x,y,dirX,dirY){
+  this.x = x || 0;
+  this.initY = this.y = y || 0;
+  this.size = size || 5;
+  this.dirX = G.RandomDir() * dirX * Math.random() || 0;
+  this.dirY = -dirY * Math.random() - 3 || 0;
+  this.bounces = 0;
+  this.render = function(ctx){
+    this.x += this.dirX;
+    this.y += this.dirY;
+    this.dirY += 0.5;
+    if(this.y > this.initY){
+      this.dirY = -this.dirY; 
+      this.bounces++;
+      if(this.bounces > 0){
+        this.dead = 1;
+      } 
+    }
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(this.x + 3,this.y + 3,this.size,this.size);
+	ctx.globalAlpha = 1;
+    ctx.fillRect(this.x,this.y,this.size,this.size);
+  };
+}
+
+G.ParticleSystem = function(x,y,count,type,size,dirX,dirY){
+  this.particles = [];
+  type = type || G.FloorParticle;
+  while(count--){
+   this.particles.push(new type(size,x,y,dirX,dirY)); 
+  }
+  this.render = function(ctx){
+    var i = this.particles.length;
+    while(i--){
+      var p = this.particles[i];
+      if(p.dead){
+       continue; 
+      }
+      p.render(ctx);
+    }
+  };
 }
