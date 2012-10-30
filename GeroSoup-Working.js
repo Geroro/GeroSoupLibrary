@@ -334,7 +334,7 @@ G.GamePadListener = function(d){
 		this.init();
 	}else{
 		console.log('Gamepads Failed');
-		this = false;
+		return false;
 	}
 
 }
