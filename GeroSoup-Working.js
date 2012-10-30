@@ -24,7 +24,7 @@ G.Scene = function(width, height, parent){
 this.width = width || 0;
 this.height = height || 0;
 this.camera = {x:0,y:0};
-this.scale = {x:0,y:0};
+this.scale = {x:1,y:1};
 this.ctx = document.createElement('canvas').getContext('2d');
 var ctx = this.ctx;
 this.screenshot = function(){
@@ -129,16 +129,25 @@ this.render = function(){
 	}
 }
 
-this.empty = function(){
+this.dump = this.empty = function(){
 	this.objects = {};
 }
 
-this.emptyHud = function(){
+this.dumpHud = this.emptyHud = function(){
 	this.hud = {};
 };
 
 this.blank = function(){
 	this.ctx.clearRect(0,0,this.width,this.height);
+}
+
+this.translate = function(callback){
+	var ctx = this.ctx;
+	ctx.save();
+	ctx.scale(this.scale.x,this.scale.y);
+	ctx.translate(-this.camera.x,-this.camera.y);
+	callback();
+	ctx.restore();
 }
 
 this.clear = function(){
@@ -609,7 +618,7 @@ G.DefaultStyle = function(){
     document.body.appendChild(s);
 }
 
-G.Rotate = function(object,rotation){
+G.Rotate = function(object,rotation){ // what if I used a callback instead of a weird hacky modification?
   object.rotation = rotation || 0;
   object.render2 = object.render;
   object.render = function(ctx){
@@ -625,7 +634,7 @@ G.Rotate = function(object,rotation){
   };
 }
 
-G.Image = function(url,x,y,rotation,axisX,axisY){
+G.Image = function(url,x,y,rotation,axisX,axisY){ // add a flip / mirror option
   this.x = x || 0;
   this.y = y || 0;
   this.image = new Image();
@@ -687,20 +696,103 @@ G.FloorParticle = function(size,x,y,dirX,dirY){
   };
 }
 
-G.ParticleSystem = function(x,y,count,type,size,dirX,dirY){
+G.ParticleSystem = function(x,y,count,type,size,dirX,dirY,color){
   this.particles = [];
+  this.color = color || 0;
   type = type || G.FloorParticle;
   while(count--){
    this.particles.push(new type(size,x,y,dirX,dirY)); 
   }
   this.render = function(ctx){
+  	if(this.color){
+  		ctx.strokeStyle = this.color;
+  	}
     var i = this.particles.length;
+    var deadCount = 0;
     while(i--){
       var p = this.particles[i];
       if(p.dead){
+      	deadCount++;
        continue; 
       }
       p.render(ctx);
     }
+    if(deadCount == this.particles.length){
+    	scene.remove(this);
+    }
   };
 }
+
+G.TouchControls = function(o){//touchListener
+		o = o || {};
+		var tc = this;
+		this.digital = {};
+		this.analog = {};
+		this.buttonSize = 32;
+		this.color = o.color || G.RandomColor();
+		this.render = function(ctx){
+			ctx.globalAlpha = 0.5;
+			ctx.fillStyle = this.color;
+			for(var key in this.digital){
+				var b = this.digital[key];
+				ctx.drawButton(b.x,b.y,b.size,b.size);
+			}
+			ctx.globalAlpha = 1;
+		}
+		this.touchButton = function(index,x,y,size,down,up){
+			var _this = this;
+			this.index = index;
+			this.x = x || 0;
+			this.y = y || 0;
+			this.pressed = 0;
+			this.size = size || 10;
+			this.down = down || function(){console.log(_this.index)};
+			this.up = up || function(){console.log(_this.index)};
+		}
+		this.addDigitalButton = function(index,x,y,size,down,up){
+			this.digital[index] = new this.touchButton(index,x,y,size,down,up);
+		}
+		this.touchstart = function(a){
+			for(var key in a.touches){
+				tc.touchStartCheck(a.touches[key]);
+			}
+		}
+		this.touchStartCheck = function(a){
+			var t = {
+				x: a.clientX || a.pageX,
+				y: a.clientY || a.pageY
+			};
+			t.x -= scene.canvas.offsetLeft;
+			t.y -= scene.canvas.offsetTop;
+			for(var key in this.digital){
+				var b = this.digital[key];
+				if(G.GetDistance(b,t) < b.size){
+					b.down();
+					b.pressed = 1;
+				}
+			}
+		}
+		this.touchend = function(a){
+			for(var key in a.changedTouches){
+				tc.touchEndCheck(a.changedTouches[key]);
+			}
+		}
+		this.touchEndCheck = function(a){
+			var t = {
+				x: a.clientX || a.pageX,
+				y: a.clientY || a.pageY
+			};
+			t.x -= scene.canvas.offsetLeft;
+			t.y -= scene.canvas.offsetTop;
+
+			for(var key in this.digital){
+				var b = this.digital[key];
+				if(G.GetDistance(b,t) < b.size){
+					b.up();
+				}
+			}
+		}
+		scene.canvas.addEventListener('touchstart',this.touchstart,false);
+		scene.canvas.addEventListener('touchend',this.touchend,false);
+		scene.addHud(this);
+	}
