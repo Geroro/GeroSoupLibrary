@@ -345,32 +345,32 @@ G.KeyListener=function(debug){
 	this.down = {};
 	this.up = {};
 	if(debug){
-	this.keyDown = function(){
+	this.keyDown = function(e){
 		if(_this.pause){return};
-		var key = event.which || event.keyCode;
+		var key = e.which || e.keyCode;
 		console.log(key);
 		//console.log("keyDown:" + key);
 		if(_this.down[key]){_this.down[key]()};
 	}
 	
-	this.keyUp = function(){
+	this.keyUp = function(e){
 		if(_this.pause){return};
-		var key = event.which || event.keyCode;
+		var key = e.which || e.keyCode;
 		console.log(key);
 		//console.log("keyUp:"+key);
 		if(_this.up[key]){_this.up[key]()};
 	}
 	}else{
-	this.keyDown = function(){
+	this.keyDown = function(e){
 		if(_this.pause){return};
-		var key = event.which || event.keyCode;
+		var key = e.which || e.keyCode;
 		//console.log("keyDown:" + key);
 		if(_this.down[key]){_this.down[key]()};
 	}
 	
-	this.keyUp = function(){
+	this.keyUp = function(e){
 		if(_this.pause){return};
-		var key = event.which || event.keyCode;
+		var key = e.which || e.keyCode;
 		//console.log("keyUp:"+key);
 		if(_this.up[key]){_this.up[key]()};
 	}
