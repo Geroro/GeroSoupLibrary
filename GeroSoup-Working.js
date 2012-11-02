@@ -129,6 +129,14 @@ this.render = function(){
 	}
 }
 
+this.update = function(){
+	var ctx = this.ctx;
+	for(i in this.objects){
+		var o = this.objects[i];
+		o.render(ctx);
+	}
+}
+
 this.dump = this.empty = function(){
 	this.objects = {};
 }
