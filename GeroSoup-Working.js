@@ -20,6 +20,28 @@ G.padDebounce = [];
 
 G.NotificationTime = 2000;
 
+G.Logic = function(){
+	this.objects = {};
+	this.length = 0;
+	this.add = function(o){
+		o.GeroSoupID = this.length;
+		this.objects[o.GeroSoupID] = o;
+		this.length++;
+	};
+	this.remove = function(o){
+		delete this.objects[o.GeroSoupID];
+	}
+	this.update = function(){
+		for(i in this.objects){
+			var o = this.objects[i];
+			o.update();
+		}
+	}
+	this.dump = function(){
+		this.objects = {};
+	}
+}
+
 G.Scene = function(width, height, parent){
 this.width = width || 0;
 this.height = height || 0;
@@ -125,14 +147,6 @@ this.render = function(){
 	ctx.restore();
 	for(i in this.hud){
 		var o = this.hud[i];
-		o.render(ctx);
-	}
-}
-
-this.update = function(){
-	var ctx = this.ctx;
-	for(i in this.objects){
-		var o = this.objects[i];
 		o.render(ctx);
 	}
 }
