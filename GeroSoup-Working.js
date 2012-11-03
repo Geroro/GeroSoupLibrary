@@ -367,35 +367,43 @@ G.KeyListener=function(debug){
 	this.down = {};
 	this.up = {};
 	if(debug){
-	this.keyDown = function(e){
-		if(_this.pause){return};
-		var key = e.which || e.keyCode;
-		console.log(key);
-		//console.log("keyDown:" + key);
-		if(_this.down[key]){_this.down[key]()};
-	}
-	
-	this.keyUp = function(e){
-		if(_this.pause){return};
-		var key = e.which || e.keyCode;
-		console.log(key);
-		//console.log("keyUp:"+key);
-		if(_this.up[key]){_this.up[key]()};
-	}
+		this.keyDown = function(e){
+			if(_this.pause){return};
+			var key = e.which || e.keyCode;
+			console.log(key);
+			//console.log("keyDown:" + key);
+			if(_this.down[key]){_this.down[key]()};
+		}
+		this.keyUp = function(e){
+			if(_this.pause){return};
+			var key = e.which || e.keyCode;
+			console.log(key);
+			//console.log("keyUp:"+key);
+			if(_this.up[key]){_this.up[key]()};
+		}
 	}else{
-	this.keyDown = function(e){
-		if(_this.pause){return};
-		var key = e.which || e.keyCode;
-		//console.log("keyDown:" + key);
-		if(_this.down[key]){_this.down[key]()};
+		this.keyDown = function(e){
+			if(_this.pause){return};
+			var key = e.which || e.keyCode;
+			//console.log("keyDown:" + key);
+			if(_this.down[key]){_this.down[key]()};
+		}	
+		this.keyUp = function(e){
+			if(_this.pause){return};
+			var key = e.which || e.keyCode;
+			//console.log("keyUp:"+key);
+			if(_this.up[key]){_this.up[key]()};
+		}
 	}
-	
-	this.keyUp = function(e){
-		if(_this.pause){return};
-		var key = e.which || e.keyCode;
-		//console.log("keyUp:"+key);
-		if(_this.up[key]){_this.up[key]()};
+	this.setDown = function(a,callback){
+		for(var i = 0; i < a.length; i++){
+			this.down[a[i]] = callback;
+		}
 	}
+	this.setUp = function(a,callback){
+		for(var i = 0; i < a.length; i++){
+			this.up[a[i]] = callback;
+		}
 	}
 	document.addEventListener('keydown',_this.keyDown,false);
 	document.addEventListener('keyup',_this.keyUp,false);
@@ -403,14 +411,17 @@ G.KeyListener=function(debug){
 return this;
 }
 
-G.GetDistance = function(a,b){
+G.GetDistance = function(a,b,ignoreZ){
 	var xDis = b.x - a.x;
 	xDis = xDis * xDis;
-
 	var yDis = b.y - a.y;
 	yDis = yDis * yDis;
-	
-	var dis = xDis + yDis;
+	if(!ignoreZ && a.z && b.z){
+		var zDis = b.z - a.z;
+		var dis = xDis + yDis + zDis;
+	}else{
+		var dis = xDis + yDis;
+	}
 	return Math.sqrt(dis);
 }
 
@@ -488,6 +499,10 @@ G.StrokeRect = function(x,y,width,height,rotation){
 }
 
 G.RectCollision = function(a,b){
+	a.width = a.width || 0;
+	b.width = b.width || 0;
+	a.height = a.height || 0;
+	b.height = b.height || 0;
   if(a.x > b.x + b.width){
    return 0; 
   }
@@ -525,17 +540,18 @@ G.GetDir2 = function(a,b){
 //returns closest object to o in a with a max distance of distance or infinity
 G.GetClosest = function(o,a,distance){
 	var distance = distance || Infinity;
-	var target;
+	var targetPosition;
+	var targetObject;
 	for(var key in a){
-		var t = a[key];
-		if(t.alive === 0){continue;}
+		var t = a[key].position || a[key];
 		var d = G.GetDistance(o,t);
 		if(d < distance){
-			target = t;
+			targetPosition = t;
 			distance = d;
+			targetObject = a[key];
 		}
 	}
-	return target;
+	return {closest:targetObject,distance:distance};
 }
 
 G.AddScript = function(src){
@@ -745,19 +761,18 @@ G.ParticleSystem = function(x,y,count,type,size,dirX,dirY,color){
   };
 }
 
-G.TouchControls = function(o){//touchListener
-		o = o || {};
+G.TouchControls = function(canvas,color){//touchListener
 		var tc = this;
 		this.digital = {};
 		this.analog = {};
 		this.buttonSize = 32;
-		this.color = o.color || G.RandomColor();
+		this.color = color || G.RandomColor();
 		this.render = function(ctx){
-			ctx.globalAlpha = 0.5;
+			ctx.globalAlpha = 0.2;
 			ctx.fillStyle = this.color;
 			for(var key in this.digital){
 				var b = this.digital[key];
-				ctx.drawButton(b.x,b.y,b.size,b.size);
+				ctx.fillRect(b.x,b.y,b.width,b.height);
 			}
 			ctx.globalAlpha = 1;
 		}
@@ -767,7 +782,7 @@ G.TouchControls = function(o){//touchListener
 			this.x = x || 0;
 			this.y = y || 0;
 			this.pressed = 0;
-			this.size = size || 10;
+			this.width = this.height = size || 10;
 			this.down = down || function(){console.log(_this.index)};
 			this.up = up || function(){console.log(_this.index)};
 		}
@@ -784,11 +799,12 @@ G.TouchControls = function(o){//touchListener
 				x: a.clientX || a.pageX,
 				y: a.clientY || a.pageY
 			};
-			t.x -= scene.canvas.offsetLeft;
-			t.y -= scene.canvas.offsetTop;
+			t.x -= canvas.offsetLeft;
+			t.y -= canvas.offsetTop;
+			if(isNaN(t.x) || isNaN(t.y)){return;}
 			for(var key in this.digital){
 				var b = this.digital[key];
-				if(G.GetDistance(b,t) < b.size){
+				if(G.RectCollision(b,t)){
 					b.down();
 					b.pressed = 1;
 				}
@@ -804,17 +820,16 @@ G.TouchControls = function(o){//touchListener
 				x: a.clientX || a.pageX,
 				y: a.clientY || a.pageY
 			};
-			t.x -= scene.canvas.offsetLeft;
-			t.y -= scene.canvas.offsetTop;
-
+			t.x -= canvas.offsetLeft;
+			t.y -= canvas.offsetTop;
+			if(isNaN(t.x) || isNaN(t.y)){return;}
 			for(var key in this.digital){
 				var b = this.digital[key];
-				if(G.GetDistance(b,t) < b.size){
+				if(G.RectCollision(b,t)){
 					b.up();
 				}
 			}
 		}
-		scene.canvas.addEventListener('touchstart',this.touchstart,false);
-		scene.canvas.addEventListener('touchend',this.touchend,false);
-		scene.addHud(this);
+		canvas.addEventListener('touchstart',this.touchstart,false);
+		canvas.addEventListener('touchend',this.touchend,false);
 	}
