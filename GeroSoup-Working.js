@@ -42,10 +42,11 @@ G.Logic = function(){
 	}
 }
 
-G.Scene = function(width, height, parent){
+G.Scene = function(width, height, objects,parent){
 this.width = width || 0;
 this.height = height || 0;
 this.camera = {x:0,y:0};
+this.renderOnly = !!(objects) || false;
 this.scale = {x:1,y:1};
 this.ctx = document.createElement('canvas').getContext('2d');
 var ctx = this.ctx;
@@ -61,6 +62,159 @@ ctx.fillCircle = function(size,x,y,start,end,backwards){
 	ctx.arc(x,y,size,start,end,backwards); // Outer circle
 	ctx.fill();
 }
+
+ctx.fillTriangle = function(size,x,y,flip){ 
+ size *= 0.5;
+ ctx.beginPath();
+  if(flip){
+   ctx.moveTo(x+size,y+size); 
+   ctx.lineTo(x-size,y+size);
+   ctx.lineTo(x,y-size);
+   ctx.lineTo(x+size,y+size); 
+  }else{
+   ctx.moveTo(x-size,y-size); 
+   ctx.lineTo(x+size,y-size);
+   ctx.lineTo(x,y+size);
+   ctx.lineTo(x-size,y-size); 
+  }
+  ctx.fill();
+};
+  
+ctx.strokeTriangle = function(size,x,y,flip){
+ size *= 0.5;
+ ctx.beginPath();
+  if(flip){
+   ctx.moveTo(x+size,y+size); 
+   ctx.lineTo(x-size,y+size);
+   ctx.lineTo(x,y-size);
+   ctx.lineTo(x+size,y+size); 
+  }else{
+   ctx.moveTo(x-size,y-size); 
+   ctx.lineTo(x+size,y-size);
+   ctx.lineTo(x,y+size);
+   ctx.lineTo(x-size,y-size); 
+  }
+  ctx.stroke();
+}; 
+
+//why do these two break scene.render when they're added as prototypes?
+G.Get8BitTextWidth = function(string,scale){
+	scale = scale || 2;
+	var width = 0;
+	for(var i = 0; i < string.length; i++){
+		if(G.Letters[string[i]]){
+			width += G.Letters[string[i]].width || 4;
+		}else{
+			width += 4;
+		}
+		width++;
+	}
+	return width * scale;
+};
+
+G.Get8BitTextHeight = function(string,scale){
+	scale = scale || 2;
+	return 5 * scale;
+};
+
+ctx.__proto__.fillText8Bit = function(string,x,y,scale){
+	var drawLetter = function(l,x,y,scale){ 
+	  l = l.toUpperCase();
+	  if(G.Letters[l]){
+	    l = G.Letters[l];
+	    var width = l.width || 4;
+	    var xOffset = 0;
+	    var yOffset = 0;
+	    for(var i = 0; i < l.pattern.length;i++){
+	      if(l.pattern[i]){
+	       ctx.fillRect(x+xOffset,y+yOffset,scale,scale);
+	      }
+	      xOffset+=scale;
+	      if(xOffset === width * scale){
+	       xOffset = 0;
+	       yOffset += scale;
+	      }
+	    }
+	    width++;
+	    return width * scale;
+	  }
+	  return 4 * scale;  
+	}
+	if(ctx.textAlign === 'center'){
+		x -= Math.floor(G.Get8BitTextWidth(string,scale) * 0.5);
+	}
+  scale = scale || 2;
+  var xOffset = 0;
+  //x -= string.length * scale;
+  for(var i = 0; i < string.length; i++){
+    xOffset += drawLetter(string[i],x +xOffset,y,scale);
+  }
+};
+
+ctx.__proto__.clearText8Bit = function(string,x,y,scale){
+	var drawLetter = function(l,x,y,scale){ 
+	  l = l.toUpperCase();
+	  if(G.Letters[l]){
+	    l = G.Letters[l];
+	    var width = l.width || 4;
+	    var xOffset = 0;
+	    var yOffset = 0;
+	    for(var i = 0; i < l.pattern.length;i++){
+	      if(l.pattern[i]){
+	       ctx.clearRect(x+xOffset,y+yOffset,scale,scale);
+	      }
+	      xOffset+=scale;
+	      if(xOffset === width * scale){
+	       xOffset = 0;
+	       yOffset += scale;
+	      }
+	    }
+	    width++;
+	    return width * scale;
+	  }
+	  return 4 * scale;  
+	}
+	if(ctx.textAlign === 'center'){
+		x -= Math.floor(G.Get8BitTextWidth(string,scale) * 0.5);
+	}
+  scale = scale || 2;
+  var xOffset = 0;
+  //x -= string.length * scale;
+  for(var i = 0; i < string.length; i++){
+    xOffset += drawLetter(string[i],x +xOffset,y,scale);
+  }
+};
+
+ctx.__proto__.strokeText8Bit = function(string,x,y,scale){
+	var drawLetter = function(l,x,y,scale){ 
+	  l = l.toUpperCase();
+	  if(G.Letters[l]){
+	    l = G.Letters[l];
+	    var width = l.width || 4;
+	    var xOffset = 0;
+	    var yOffset = 0;
+	    for(var i = 0; i < l.pattern.length;i++){
+	      if(l.pattern[i]){
+	       ctx.strokeRect(x+xOffset,y+yOffset,scale,scale);
+	      }
+	      xOffset+=scale;
+	      if(xOffset === width * scale){
+	       xOffset = 0;
+	       yOffset += scale;
+	      }
+	    }
+	    width++;
+	    return width * scale;
+	  }
+	  return 4 * scale;  
+	}
+  scale = scale || 2;
+  var xOffset = 0;
+  //x -= string.length * scale;
+  for(var i = 0; i < string.length; i++){
+    xOffset += drawLetter(string[i],x +xOffset,y,scale);
+  }
+};
 ctx.cutCircle = function(size,x,y,start,end,backwards){
 	start = start || 0;
 	end = end || Math.PI*2;
@@ -111,10 +265,10 @@ this.canvas.width = this.width;
 this.canvas.height = this.height;
 this.camera = {
 x:0,
-y:0,
+y:0
 }
 this.length = 0;
-this.objects = {};
+this.objects = objects || {};
 this.hud = {};
 
 this.add = function(o){
@@ -126,38 +280,29 @@ this.remove = function(o){
 	delete this.objects[o.GeroSoupID];
 }
 
-this.addHud = function(o){
-	o.GeroSoupID = this.length;
-	this.hud[o.GeroSoupID] = o;
-	this.length++;
-};
-this.removeHud = function(o){
-	delete this.hud[o.GeroSoupID];
-}
-
 this.render = function(){
 	var ctx = this.ctx;
 	ctx.save();
 	ctx.scale(this.scale.x,this.scale.y);
 	ctx.translate(-this.camera.x,-this.camera.y);
-	for(i in this.objects){
-		var o = this.objects[i];
-		o.render(ctx);
+	if(this.renderOnly){
+		for(i in this.objects){
+			var o = this.objects[i];
+			o.render(ctx,this);
+		}
+	}else{
+		for(i in this.objects){
+			var o = this.objects[i];
+			o.update(this);
+			o.render(ctx,this);
+		}
 	}
 	ctx.restore();
-	for(i in this.hud){
-		var o = this.hud[i];
-		o.render(ctx);
-	}
 }
 
 this.dump = this.empty = function(){
 	this.objects = {};
 }
-
-this.dumpHud = this.emptyHud = function(){
-	this.hud = {};
-};
 
 this.blank = function(){
 	this.ctx.clearRect(0,0,this.width,this.height);
@@ -252,7 +397,13 @@ G.MapNumber = function(x,a,b,c,d){
 	return (x-a)/(b-a) * (d-c) + c;
 }
 //debugger is a reserved word :/
-G.GamePadListener = function(d){
+G.GamePadListener = function(o){
+	if(o){
+		var threshold = o.threshold || 0.2;
+	}else{
+		var threshold = 0.2;
+	}
+	var d;
 	var gamepadSupportAvailable = !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
 
 	var _this = this;
@@ -282,21 +433,19 @@ G.GamePadListener = function(d){
 			var g = gamepads[key];
 			for(var b in g.buttons){
 				var d = _this.gamepads[key].buttonDebounce[b];
-				if(g.buttons[b] > 0.2 || g.buttons[b] < -0.2){
+				if(g.buttons[b] > threshold || g.buttons[b] < -threshold){
 					if(!d){
+						_this.gamepads[key].catchButtonDown(b,g.buttons[b]);
 						if(_this.gamepads[key].buttonDown[b]){
-							_this.gamepads[key].buttonDown[b](g.buttons[b],b);
-						}else{
-							console.log(g.buttons[b]);
+							_this.gamepads[key].buttonDown[b](b,g.buttons[b]);
 						}
 					}
 					_this.gamepads[key].buttonDebounce[b] = 1;
 				}else{
 					if(d){
+						_this.gamepads[key].catchButtonUp(b,g.buttons[b]);
 						if(_this.gamepads[key].buttonUp[b]){
-							_this.gamepads[key].buttonUp[b](g.buttons[b],b);
-						}else{
-							console.log(b);
+						_this.gamepads[key].buttonUp[b](b,g.buttons[b]);
 						}
 					}
 					_this.gamepads[key].buttonDebounce[b] = 0;
@@ -304,29 +453,23 @@ G.GamePadListener = function(d){
 			}
 			for(var a in g.axes){
 				var d = _this.gamepads[key].axisDebounce[a];
-				if(g.axes[a] > 0.2 || g.axes[a] < -0.2){
-					if(!d){
-						if(_this.gamepads[key].axisDown[a]){
-							_this.gamepads[key].axisDown[a](g.axes[a],a);
-						}else{
-							console.log(a);
-						}
+				if(g.axes[a] > threshold || g.axes[a] < -threshold){
+					_this.gamepads[key].catchAxisDown(g.axes[a],a,1);
+					if(!d && _this.gamepads[key].axisDown[a]){
+						_this.gamepads[key].axisDown[a](g.axes[a],a,1);
 					}
 					_this.gamepads[key].axisDebounce[a] = 1;
 				}else{
-					if(d){
-						if(_this.gamepads[key].axisUp[a]){
-							_this.gamepads[key].axisUp[a](g.axes[a],a);
-						}else{
-							console.log(a);
-						}
+					_this.gamepads[key].catchAxisUp(g.axes[a],a,1);
+					if(d && _this.gamepads[key].axisUp[a]){
+						_this.gamepads[key].axisUp[a](g.axes[a],a,1);
 					}
 					_this.gamepads[key].axisDebounce[a] = 0;
 				}
 			}
 		}
 	}
-	this.debugger = function(){
+	this.inputMonitor = function(){
 		this.render = function(ctx){
 			//ctx.clearRect(0,0,200,300);
 			var y = 0;
@@ -341,6 +484,9 @@ G.GamePadListener = function(d){
 				y+=40;
 			}
 		}
+		this.update = function(){
+
+		}
 	}
 	this.gamepad = function(){
 		this.active = 0;
@@ -350,6 +496,10 @@ G.GamePadListener = function(d){
 		this.axisDown = {};
 		this.axisUp = {};
 		this.axisDebounce = {};
+		this.catchButtonDown = function(){};
+		this.catchButtonUp = function(){};
+		this.catchAxisDown = function(){};
+		this.catchAxisUp = function(){};
 	}
 	if(gamepadSupportAvailable){
 		console.log('Gamepads Enabled');
@@ -358,43 +508,57 @@ G.GamePadListener = function(d){
 		console.log('Gamepads Failed');
 		return false;
 	}
-
 }
 
-G.KeyListener=function(debug){
+G.KeyListener=function(repeat,debug){
 	var _this = this;
 	this.pause = 0;
 	this.down = {};
 	this.up = {};
+	this.repeat = {};
 	if(debug){
-		this.keyDown = function(e){
+		this.keyDown = function(event){
 			if(_this.pause){return};
-			var key = e.which || e.keyCode;
-			console.log(key);
-			//console.log("keyDown:" + key);
-			if(_this.down[key]){_this.down[key]()};
+			var key = event.which || event.keyCode;
+			console.log("keyDown:" + key);
+			if(!_this.repeat[key] || repeat){
+				_this.catchDown(key);
+				if(_this.down[key]){
+					_this.down[key](event);
+				}
+			};
+			_this.repeat[key] = 1;
 		}
 		this.keyUp = function(e){
 			if(_this.pause){return};
-			var key = e.which || e.keyCode;
-			console.log(key);
-			//console.log("keyUp:"+key);
-			if(_this.up[key]){_this.up[key]()};
+			var key = event.which || event.keyCode;
+			console.log("keyUp:"+key);
+			_this.catchUp(key);
+			_this.repeat[key] = 0;
+			if(_this.up[key]){_this.up[key](event)};
 		}
 	}else{
 		this.keyDown = function(e){
 			if(_this.pause){return};
-			var key = e.which || e.keyCode;
-			//console.log("keyDown:" + key);
-			if(_this.down[key]){_this.down[key]()};
+			var key = event.which || event.keyCode;
+			if(!_this.repeat[key] || repeat){
+				_this.catchDown(key);
+				if(_this.down[key]){
+					_this.down[key](event);
+				}
+			};
+			_this.repeat[key] = 1;
 		}	
 		this.keyUp = function(e){
 			if(_this.pause){return};
-			var key = e.which || e.keyCode;
-			//console.log("keyUp:"+key);
-			if(_this.up[key]){_this.up[key]()};
+			var key = event.which || event.keyCode;
+			_this.catchUp(key);
+			_this.repeat[key] = 0;
+			if(_this.up[key]){_this.up[key](event)};
 		}
 	}
+	this.catchDown = function(){};
+	this.catchUp = function(){};
 	this.setDown = function(a,callback){
 		for(var i = 0; i < a.length; i++){
 			this.down[a[i]] = callback;
@@ -425,16 +589,18 @@ G.GetDistance = function(a,b,ignoreZ){
 	return Math.sqrt(dis);
 }
 
-//3d Function
-G.GetDistance3 = function(a,b){
+G.GetDistanceCheap = function(a,b,ignoreZ){
 	var xDis = b.x - a.x;
-	var yDis = b.y - a.y;
-	var zDis = b.z - a.z;
 	xDis = xDis * xDis;
+	var yDis = b.y - a.y;
 	yDis = yDis * yDis;
-	zDis = zDis * zDis;
-	var dis = xDis + yDis + zDis;
-	return Math.sqrt(dis);
+	if(!ignoreZ && a.z && b.z){
+		var zDis = b.z - a.z;
+		var dis = xDis + yDis + zDis;
+	}else{
+		var dis = xDis + yDis;
+	}
+	return dis;
 }
 
 G.RandomDir = function(){
@@ -450,59 +616,46 @@ G.length = function(x,y){
 	return Math.sqrt(x * x + y * y);
 }
 
-G.Rect = function(x,y,width,height){
+G.Rect = function(x,y,width,height,stroke){
 	this.x = x || 0;
 	this.y = y || 0;
 	this.width = width || 0;
 	this.height = height || 0;
+	this.width+=0.5;
+	this.height+=0.5;
+	if(!stroke){
+		this.draw = 'fillRect';
+	}else{
+		this.draw = 'strokeRect';
+	}
 	this.render = function(ctx){
-		ctx.fillRect(this.x,this.y,this.width,this.height);
+		ctx[this.draw](this.x,this.y,this.width,this.height);
 	}
 }
 
-G.FillRect = function(x,y,width,height,rotation){
+G.Circle = function(size,x,y,stroke,start,end,backwards){
+	this.size = size || 0;
 	this.x = x || 0;
 	this.y = y || 0;
-	this.width = width || 0;
-	this.height = height || 0;
-	this.rotation = rotation || 0;
-	this.render = function(ctx){
-		if(this.rotation){
-			ctx.translate(this.x, this.y);
-			ctx.rotate(this.rotation);
-			ctx.fillRect(-this.width * 0.5,-this.height*0.5,this.width,this.height);
-			ctx.rotate(-this.rotation);
-			ctx.translate(-this.x, -this.y);
-		}else{
-			ctx.fillRect(this.x,this.y,this.width,this.height);
-		}
+	this.start = start || 0;
+	this.end = end || 0;
+	this.backwards = backwards || 0;
+	this.size+=0.5;
+	if(!stroke){
+		this.draw = 'fillCircle';
+	}else{
+		this.draw = 'strokeCircle';
 	}
-}
-
-G.StrokeRect = function(x,y,width,height,rotation){
-	this.x = x || 0;
-	this.y = y || 0;
-	this.width = width || 0;
-	this.height = height || 0;
-	this.rotation = rotation || 0;
 	this.render = function(ctx){
-		if(this.rotation){
-			ctx.translate(this.x, this.y);
-			ctx.rotate(this.rotation);
-			ctx.strokeRect(-this.width * 0.5,-this.height*0.5,this.width,this.height);
-			ctx.rotate(-this.rotation);
-			ctx.translate(-this.x, -this.y);
-		}else{
-			ctx.strokeRect(this.x,this.y,this.width,this.height);
-		}
+		ctx[this.draw](this.size,this.x,this.y,this.start,this.end,this.backwards);
 	}
 }
 
 G.RectCollision = function(a,b){
-	a.width = a.width || 0;
-	b.width = b.width || 0;
-	a.height = a.height || 0;
-	b.height = b.height || 0;
+	a.width = a.width || a.size || 0;
+	b.width = b.width || a.size ||0;
+	a.height = a.height || b.size || 0;
+	b.height = b.height || b.size ||0;
   if(a.x > b.x + b.width){
    return 0; 
   }
@@ -538,13 +691,13 @@ G.GetDir2 = function(a,b){
 //######################
 
 //returns closest object to o in a with a max distance of distance or infinity
-G.GetClosest = function(o,a,distance){
+G.FindClosest = function(o,a,distance){
 	var distance = distance || Infinity;
 	var targetPosition;
 	var targetObject;
 	for(var key in a){
 		var t = a[key].position || a[key];
-		var d = G.GetDistance(o,t);
+		var d = G.GetDistanceCheap(o,t);
 		if(d < distance){
 			targetPosition = t;
 			distance = d;
@@ -743,7 +896,7 @@ G.ParticleSystem = function(x,y,count,type,size,dirX,dirY,color){
   }
   this.render = function(ctx){
   	if(this.color){
-  		ctx.strokeStyle = this.color;
+  		ctx.fillStyle = ctx.strokeStyle = this.color;
   	}
     var i = this.particles.length;
     var deadCount = 0;
@@ -761,33 +914,66 @@ G.ParticleSystem = function(x,y,count,type,size,dirX,dirY,color){
   };
 }
 
-G.TouchControls = function(canvas,color){//touchListener
+G.TouchControls = function(canvas,color,alpha){//touchListener
 		var tc = this;
 		this.digital = {};
 		this.analog = {};
 		this.buttonSize = 32;
 		this.color = color || G.RandomColor();
+		alpha = alpha || 1;
 		this.render = function(ctx){
-			ctx.globalAlpha = 0.2;
+			ctx.globalAlpha = alpha;
 			ctx.fillStyle = this.color;
 			for(var key in this.digital){
 				var b = this.digital[key];
+				if(b.color){
+					ctx.fillStyle = b.color;
+				}
 				ctx.fillRect(b.x,b.y,b.width,b.height);
+			}
+			for(var key in this.analog){
+				var b = this.analog[key];
+				if(b.color){
+					ctx.fillStyle = b.color;
+				}
+				ctx.fillRect(b.x,b.y,b.width,b.height);
+				ctx.strokeCircle(10,b.x + b.width*0.5,b.y+b.height*0.5);
 			}
 			ctx.globalAlpha = 1;
 		}
-		this.touchButton = function(index,x,y,size,down,up){
+		this.touchButton = function(index,x,y,width,height,down,up,color){
 			var _this = this;
 			this.index = index;
 			this.x = x || 0;
 			this.y = y || 0;
 			this.pressed = 0;
-			this.width = this.height = size || 10;
+			this.width = width || 10;
+			this.height = height || 10;
 			this.down = down || function(){console.log(_this.index)};
 			this.up = up || function(){console.log(_this.index)};
+			this.color = color;
 		}
-		this.addDigitalButton = function(index,x,y,size,down,up){
-			this.digital[index] = new this.touchButton(index,x,y,size,down,up);
+
+		this.analogRect = function(index,x,y,width,height,down,up,color){
+			var _this = this;
+			this.index = index;
+			this.x = x || 0;
+			this.y = y || 0;
+			this.width = width || 10;
+			this.height = height || 10;
+			this.down = down || function(a,b){console.log(_this.index,a,b);};
+			this.up = up || function(a,b){console.log(_this.index,a,b);};
+			this.color = color;
+		}
+
+		this.analogRect.__proto__.type = 'AnalogRect';
+
+		this.addAnalogRect = function(index,x,y,width,height,down,up,color){
+			this.analog[index] = new this.analogRect(index,x,y,width,height,down,up,color);
+		}
+
+		this.addDigitalButton = function(index,x,y,width,height,down,up,color){
+			this.digital[index] = new this.touchButton(index,x,y,width,height,down,up,color);
 		}
 		this.touchstart = function(a){
 			for(var key in a.touches){
@@ -807,6 +993,60 @@ G.TouchControls = function(canvas,color){//touchListener
 				if(G.RectCollision(b,t)){
 					b.down();
 					b.pressed = 1;
+					return;
+				}
+			}
+			for(var key in this.analog){
+				var b = this.analog[key];
+				if(G.RectCollision(b,t)){
+					var center = {
+						x:b.x + b.width * 0.5,
+						y:b.y + b.height * 0.5
+					};
+
+					var dir = G.GetDir2(t,center);
+					var distance = G.GetDistance(center,t);
+					var result = {
+						x:G.MapNumber(dir.x * distance + b.width * 0.5,0,b.width,-1,1),
+						y:G.MapNumber(dir.y * distance + b.height*0.5,0,b.height,-1,1),
+					}; 
+					b.down(result.x,result.y);
+					return;
+				}
+			}
+		}
+		this.touchmove = function(a){
+			for(var key in a.touches){
+				tc.touchMoveCheck(a.touches[key]);
+			}
+		}
+		this.touchMoveCheck = function(a){
+			var t = {
+				x: a.clientX || a.pageX,
+				y: a.clientY || a.pageY
+			};
+			t.x -= canvas.offsetLeft;
+			t.y -= canvas.offsetTop;
+			if(isNaN(t.x) || isNaN(t.y)){return;}
+			for(var key in this.analog){
+				var b = this.analog[key];
+				if(G.RectCollision(b,t)){
+					var center = {
+						x:b.x + b.width * 0.5,
+						y:b.y + b.height * 0.5
+					};
+					var dir = G.GetDir2(t,center);
+					var distance = G.GetDistance(center,t);
+					var result = {
+						x:G.MapNumber(dir.x * distance + b.width * 0.5,0,b.width,-1,1),
+						y:G.MapNumber(dir.y * distance + b.height*0.5,0,b.height,-1,1),
+					};
+					b.active = 1;
+					b.down(result.x,result.y);
+					return;
+				}else if(b.active){
+					b.active = 0;
+					b.up(0,0);
 				}
 			}
 		}
@@ -827,9 +1067,647 @@ G.TouchControls = function(canvas,color){//touchListener
 				var b = this.digital[key];
 				if(G.RectCollision(b,t)){
 					b.up();
+					return;
+				}
+			}
+			for(var key in this.analog){
+				var b = this.analog[key];
+				if(G.RectCollision(b,t)){
+					b.up(0,0);
+					return;
 				}
 			}
 		}
 		canvas.addEventListener('touchstart',this.touchstart,false);
 		canvas.addEventListener('touchend',this.touchend,false);
+		canvas.addEventListener('touchmove',this.touchmove,false);
 	}
+
+
+	G.CreateLabel = function(string,width,height,color,fontColor){
+		var c = document.createElement('canvas');
+		var ctx = c.getContext('2d');
+		c.width = width || 256;
+		c.height = height || 256;
+		ctx.fillStyle = color || '#f5f'
+		ctx.fillRect(0,0,c.width,c.height);
+		ctx.font = Math.floor(width * 0.25)+'px helvetica'; 
+		ctx.textAlign = 'center';
+		ctx.fillStyle = fontColor||'#fff';
+		var t = ctx.measureText(string); 
+		if(t.width > width){
+		  var a = string.split(' ');
+		  var y = height*0.5 - a.length * 8;
+		  a.forEach(function(s,i){
+		    ctx.fillText(s,width*0.5,y+24 * i);
+		  });
+		}else{
+		  ctx.fillText(string,width * 0.5,height * 0.5);
+		}
+		return c.toDataURL();
+	}
+
+//Testing Stuff
+
+
+function Grid(gridData,gridScale){ 
+  var _this = this;
+  var levels = [];
+  
+  this.render = function(ctx){ 
+      for(var x = 0; x < 32; x++){
+       for(var y = 0; y < 24; y++){  
+         this.renderBlock(x,y);
+       } 
+      } 
+  }
+  this.set = function(x,y,w){
+    if(x >= 0 && x < gridData.length && y >= 0  && y < gridData[0].length){
+      gridData[y][x] = w; 
+    }
+  }
+
+  this.closest = function(x2,y2,type){ // optimize me!
+    var blocks = [];
+    for(var x = 0; x < 32; x++){
+      for(var y = 0; y < 24; y++){  
+        if(this.getType(x,y) === type){
+          blocks.push({
+            xDis:Math.abs(x-x2),
+            yDis:Math.abs(y-y2),
+            x:x,
+            y:y
+          });
+        }
+      } 
+    }
+    var dis = Infinity;
+    var closest = false;
+    for(var key in blocks){
+      var b = blocks[key];
+      if (b.xDis + b.yDis < dis){
+        dis = b.xDis + b.yDis;
+        closest = b;
+      }
+    }
+    return closest;
+  }
+
+  this.targetCount = function(player,currentLevel){
+      var targets = 0;
+      var y = 2;
+      if(player === 1){
+       var x = 1;
+      }else{
+       var x = 17;
+      } 
+      for(var y2 = y; y2 < 20 + y; y2++){
+        for(var x2 = x; x2 < 14 + x; x2++){
+          if(gridData[y2][x2] === 2){
+            targets++;
+          }
+        }
+      }
+      return targets;
+  }
+      
+  this.isSolid = function(x,y){
+     return !!gridData[y][x];
+  }
+  
+  this.getType = function(x,y){
+   return gridData[y][x]; 
+  }
+    
+  this.fillArea = function(count){
+    var newGrid = [];
+    for(var y = 0; y < 20; y++){
+     newGrid[y] = []; 
+     for(var x = 0; x < 14; x++){
+       newGrid[y][x] = 0;
+     }
+    }
+    while(count--){
+     newGrid[G.Random(20)][G.Random(14)] = 2;
+    }
+    count = 100;
+    while(count--){
+     if(G.Random(100) > 50){
+        newGrid[G.Random(20)][G.Random(14)] = 1;
+      } 
+    }
+    newGrid[0][5] = newGrid[0][6] = newGrid[0][7] = newGrid[0][8] = 1;
+    return newGrid;
+  }
+    
+  this.loadArea = function(level,player){
+    var targets = 0;
+    var y = 2;
+    if(player === 1){
+     var x = 1;
+    }else{
+     var x = 17;
+    } 
+    for(var y2 = 0; y2 < 20; y2++){
+      for(var x2 = 0; x2 < 14; x2++){
+        this.set(x+x2,y+y2,levels[level][y2][x2]); 
+        if(levels[level][y2][x2] === 2){
+          targets++;
+        }
+      }
+    }
+  }
+
+  this.clearArea = function(player){
+    var y = 2;
+    if(player === 1){
+     var x = 1;
+    }else{
+     var x = 17;
+    } 
+    for(var y2 = 0; y2 < 20; y2++){
+      for(var x2 = 0; x2 < 14; x2++){
+        this.set(x+x2,y+y2,0); 
+      }
+    }     
+  }
+ 
+  levels.push(this.fillArea(20));
+  levels.push(this.fillArea(20));
+  levels.push(this.fillArea(20)); 
+  
+  this.loadArea(0,1,p1);
+  this.loadArea(0,2,p2);
+  
+  this.renderBlock = function(x,y){
+   //scene.ctx.fillText(x+':'+y,x*gridScale,y*gridScale);
+    switch(gridData[y][x]){
+      case 0:
+        scene.ctx.clearRect(x*gridScale+0.5,y*gridScale+0.5,gridScale,gridScale);
+      break;
+      case 1:
+        scene.ctx.fillRect(x*gridScale,y*gridScale,gridScale,gridScale);
+      break;
+      case 2:
+        scene.ctx.strokeRect(x*gridScale+0.5,y*gridScale+0.5,gridScale,gridScale);
+      break;
+    }
+  }
+  
+  this.drawBlock = function(x,y){
+    switch(gridData[y][x]){
+      case 0:
+        scene.ctx.drawImage(images.floor, x*gridScale, y*gridScale,gridScale,gridScale);
+      break;
+      case 1:
+        scene.ctx.drawImage(images.wall, x*gridScale, y*gridScale,gridScale,gridScale);
+      break;
+      case 2:
+        scene.ctx.drawImage(images.target, x*gridScale, y*gridScale,gridScale,gridScale);
+      break;
+    }
+  }
+      
+  this.getScale = function(){
+   return gridScale; 
+  }
+        
+  this.getJSON = function(){
+   return JSON.stringify(gridData);          
+  }       
+
+	this.toGrid = function(a){
+	 return Math.floor(a / gridScale); 
+	}
+}
+
+  function enableEditor(){ 
+    var toGrid = function(x){
+      return Math.floor(x / 25);
+    }
+    var draw = function(event){
+      var x = toGrid(event.clientX - scene.canvas.offsetLeft);
+      var y = toGrid(event.clientY - scene.canvas.offsetTop);
+      grid.set(x,y,event.button);
+      grid.renderBlock(x,y);
+    }
+    var mouseDown = function(event){ 
+      draw(event);
+      scene.canvas.addEventListener('mousemove',draw,false);
+      scene.canvas.addEventListener('mouseup',function(event){
+        scene.canvas.removeEventListener('mousemove',draw,false);
+      },false);
+    }
+   scene.canvas.addEventListener('mousedown',mouseDown,false); 
+  }
+
+
+G.Letters = {
+  A:{
+    pattern:[0,1,1,0,
+             1,0,0,1,
+             1,1,1,1,
+             1,0,0,1,
+             1,0,0,1]
+  },
+  B:{
+    pattern:[1,1,1,0,
+             1,0,0,1,
+             1,1,1,0,
+             1,0,0,1,
+             1,1,1,0
+            ]
+  },
+  C:{
+    pattern:[0,1,1,1,
+             1,0,0,0,
+             1,0,0,0,
+             1,0,0,0,
+             0,1,1,1
+            ]
+  },
+  D:{
+    pattern:[1,1,1,0,
+             1,0,0,1,
+             1,0,0,1,
+             1,0,0,1,
+             1,1,1,0]
+},
+  E:{
+    pattern:[1,1,1,1,
+             1,0,0,0,
+             1,1,1,1,
+             1,0,0,0,
+             1,1,1,1
+      ]
+  },
+  F:{
+             pattern:[
+             1,1,1,1,
+             1,0,0,0,
+             1,1,1,0,
+             1,0,0,0,
+             1,0,0,0
+      ]
+  },
+  G:{
+    pattern:[1,1,1,1,
+             1,0,0,0,
+             1,0,1,1,
+             1,0,0,1,
+             1,1,1,1
+      
+      ]
+  },
+  H:{
+    pattern:[1,0,0,1,
+             1,0,0,1,
+             1,1,1,1,
+             1,0,0,1,
+             1,0,0,1] 
+  },
+  I:{
+    width:3,
+    pattern:[1,1,1,
+             0,1,0,
+             0,1,0,
+             0,1,0,
+             1,1,1]   
+  },
+  J:{
+    width:3,
+    pattern:[0,0,1,
+             0,0,1,
+             0,0,1,
+             1,0,1,
+             1,1,1]
+},
+             K:{
+             pattern:[1,0,0,1,
+                      1,0,1,0,
+                      1,1,0,0,
+                      1,0,1,0,
+                      1,0,0,1]
+             },
+  L:{
+    width:3,
+    pattern:[1,0,0,
+             1,0,0,
+             1,0,0,
+             1,0,0,
+             1,1,1
+      ]
+  },
+             M:{width:5,
+             pattern:[
+             1,0,0,0,1,
+             1,1,0,1,1,
+             1,0,1,0,1,
+             1,0,0,0,1,
+             1,0,0,0,1
+             ]
+             },
+  N:{
+    width:5,
+    pattern:[1,1,0,0,1,
+             1,0,1,0,1,
+             1,0,1,0,1,
+             1,0,1,0,1,
+             1,0,0,1,1] 
+  },
+  O:{
+    pattern:[0,1,1,0,
+             1,0,0,1,
+             1,0,0,1,
+             1,0,0,1,
+             0,1,1,0]
+  },
+  P:{
+    pattern:[1,1,1,1,
+             1,0,0,1,
+             1,1,1,1,
+             1,0,0,0,
+             1,0,0,0]
+  },
+  Q:{
+    pattern:[1,1,1,1,
+             1,0,0,1,
+             1,0,0,1,
+             1,0,1,1,
+             1,1,1,1
+      ]
+  },
+             R:{
+             pattern:[
+             1,1,1,1,
+             1,0,0,1,
+             1,1,1,1,
+             1,0,1,0,
+             1,0,0,1]
+             },
+  S:{
+    pattern:[
+     0,1,1,1,
+     1,0,0,0,
+     0,1,1,0,
+     0,0,0,1,
+     1,1,1,0]
+  },
+  T:{
+    width:3,
+    pattern:[1,1,1,
+             0,1,0,
+             0,1,0,
+             0,1,0,
+             0,1,0           
+            ]
+  },
+             U:{
+             pattern:[
+             1,0,0,1,
+             1,0,0,1,
+             1,0,0,1,
+             1,0,0,1,
+             0,1,1,0]
+             },
+  
+             V:{
+             width:3,
+             pattern:[
+             1,0,1,
+             1,0,1,
+             1,0,1,
+             1,0,1,
+             0,1,0]
+             },
+  W:{//kinda funky
+    width:7,
+    pattern:[1,0,0,0,0,0,1,
+             1,0,0,1,0,0,1,
+             1,0,1,0,1,0,1,
+             1,0,1,0,1,0,1,
+             0,1,0,0,0,1,0]
+  },
+  X:{// also funky
+    width:5,
+    pattern:[1,0,0,0,1,
+             0,1,0,1,0,
+             0,0,1,0,0,
+             0,1,0,1,0,
+             1,0,0,0,1]
+  },
+  Y:{
+  	width:3,
+  	pattern:[
+  	1,0,1,
+  	1,0,1,
+  	0,1,0,
+  	0,1,0,
+  	0,1,0  	]
+  },
+  Z:{// i think its too late, this ones funky too, gonna get some sleep and go again
+    pattern:[1,1,1,1,
+             0,0,0,1,
+             0,1,1,0,
+             1,0,0,0,
+             1,1,1,1
+            ]
+  },
+  '1':{
+  	pattern:[
+  	0,1,1,0,
+  	0,0,1,0,
+  	0,0,1,0,
+  	0,0,1,0,
+  	0,1,1,1]
+  },
+  '2':{
+  	pattern:[
+  	0,1,1,0,
+  	1,0,0,1,
+  	0,0,1,0,
+  	0,1,0,0,
+  	1,1,1,1
+  	]
+  },
+  '3':{
+  	pattern:[
+  	1,1,1,1,
+  	0,0,0,1,
+  	1,1,1,1,
+  	0,0,0,1,
+  	1,1,1,1
+  	]
+  },
+  '4':{
+  	pattern:[
+  	1,0,0,1,
+  	1,0,0,1,
+  	1,1,1,1,
+  	0,0,0,1,
+  	0,0,0,1]
+  },
+  '5':{
+  	pattern:[
+  	1,1,1,1,
+  	1,0,0,0,
+  	1,1,1,1,
+  	0,0,0,1,
+  	1,1,1,1]
+  },'6':{
+  	pattern:[
+  	1,1,1,1,
+  	1,0,0,0,
+  	1,1,1,1,
+  	1,0,0,1,
+  	1,1,1,1]
+  },'7':{
+  	pattern:[
+  	1,1,1,1,
+  	0,0,0,1,
+  	0,0,1,0,
+  	0,1,0,0,
+  	1,0,0,0]
+  },'8':{
+  	pattern:[
+  	1,1,1,1,
+  	1,0,0,1,
+  	1,1,1,1,
+  	1,0,0,1,
+  	1,1,1,1]
+  },'9':{
+  	pattern:[
+  	1,1,1,1,
+  	1,0,0,1,
+  	1,1,1,1,
+  	0,0,0,1,
+  	0,0,0,1]
+  },'0':{
+  	pattern:[
+  	1,1,1,1,
+  	1,0,0,1,
+  	1,0,0,1,
+  	1,0,0,1,
+  	1,1,1,1]
+  },
+
+  '\'':{
+  	width:1,
+  	pattern:[1]
+  },
+  '&':{
+  	pattern:[
+  	0,1,0,0,
+  	1,0,1,0,
+  	0,1,0,0,
+  	1,0,1,0,
+  	0,1,0,1]
+  },
+  ':':{
+  	width:3,
+  	pattern:[
+  	0,0,0,
+  	0,1,0,
+  	0,0,0,
+  	0,1,0,
+  	0,0,0]
+  },
+  '{':{
+  	width:5,
+  	pattern:[
+  	0,0,1,0,0,
+  	0,1,0,0,0,
+  	1,1,1,1,1,
+  	0,1,0,0,0,
+  	0,0,1,0,0]
+  },
+  '}':{
+  	width:5,
+  	pattern:[
+  	0,0,1,0,0,
+  	0,0,0,1,0,
+  	1,1,1,1,1,
+  	0,0,0,1,0,
+  	0,0,1,0,0]
+  },
+  '[':{
+  	width:5,
+  	pattern:[
+  	0,0,1,0,0,
+  	0,1,1,1,0,
+  	1,0,1,0,1,
+  	0,0,1,0,0,
+  	0,0,1,0,0]
+  },
+  ']':{
+  	width:5,
+  	pattern:[
+  	0,0,1,0,0,
+  	0,0,1,0,0,
+  	1,0,1,0,1,
+  	0,1,1,1,0,
+  	0,0,1,0,0]
+  },
+  '*':{
+  	pattern:[
+  	0,1,0,0,
+  	1,0,1,0,
+  	0,1,0,0]
+  },
+  '!':{
+    width:2, 
+  pattern:[1,0,
+           1,0,
+           1,0,
+           0,0,
+           1,0]
+},
+            '.':{
+              width:2,
+            pattern:[0,0,0,0,0,0,0,0,1]
+            }
+  
+}
+
+G.Animator = function(src,size,frames,speed,timeLimit,pause){
+  var image = new Image();
+  image.src = src.src || src;
+  var time = 0;
+  var frameX = 0;
+  var frameY = 0;
+  var x = 0;
+  var y = 0;
+  this.pause = pause || 0;
+  this.hold = 0;
+  this.update = function(ctx,parent){
+    if(!this.pause && !this.hold){
+     time++;
+     if(time > timeLimit){
+       frameY += size;
+       if(frameY / size >= frames){
+        frameY = 0; 
+       }
+       time = 0;
+     }
+    }
+  };
+  this.setImage = function(img){
+  	image = img;
+  }
+  this.render = function(ctx,parent){
+  	ctx.drawImage(image, frameX, frameY, size, size, x, y, size,size);
+  }  
+
+  this.setAnim = function(f){
+    frameX = f * size;
+  }
+
+  this.setFrame = function(f){
+  	frameY = f * size;
+  }
+
+  this.set = function(x2,y2){
+  	x = x2;
+  	y = y2;
+  }
+}
